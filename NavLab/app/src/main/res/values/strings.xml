@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Raw Image Camera</string>
+    <string name="imageButton">Video Record Button</string>
+    <string name="flashImageButton">Video Record Button</string>
+</resources>
