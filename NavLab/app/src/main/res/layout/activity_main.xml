@@ -5,7 +5,8 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="ri_navlab.navlab.MainActivity">
+    tools:context="ri_navlab.navlab.android.support.v7.appcompat.MainActivity">
+
 
 
     <TextureView
@@ -15,26 +16,19 @@
         android:id="@+id/textureView"
         android:layout_alignParentStart="true" />
 
-    <ImageButton
+
+    <!--<ImageButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:srcCompat="@mipmap/imagewithoutflash"
         android:layout_alignBottom="@+id/imageButton"
         android:layout_alignParentEnd="true"
         android:layout_marginEnd="56dp"
-        android:id="@+id/imageButton2" />
+        android:id="@+id/imageButton2" /> -->
 
-    <ImageButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:srcCompat="@mipmap/imageflash"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="64dp"
-        android:layout_marginBottom="33dp"
-        android:id="@+id/imageButton" />
 
-    <ToggleButton
+
+    <!--<ToggleButton
         android:text="ToggleButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -42,6 +36,36 @@
         android:layout_alignStart="@+id/imageButton2"
         android:layout_marginStart="12dp"
         android:layout_marginTop="12dp"
-        android:id="@+id/toggleButton" />
+        android:id="@+id/toggleButton" /> -->
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:srcCompat="@mipmap/imageflash"
+        android:layout_gravity="center"
+        android:id="@+id/imageButton"
+        android:layout_marginBottom="35dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="26dp" />
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="200dp"
+        android:layout_height="72dp"
+        android:layout_alignBottom="@+id/imageButton"
+        android:layout_toEndOf="@+id/imageButton"
+        android:layout_marginStart="13dp">
+
+        <EditText
+            android:id="@+id/edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:numeric="signed"
+            android:layout_marginStart="11dp"
+            android:layout_alignBottom="@+id/imageButton"
+            android:layout_toEndOf="@+id/imageButton" />
+    </LinearLayout>
+
 
 </RelativeLayout>
