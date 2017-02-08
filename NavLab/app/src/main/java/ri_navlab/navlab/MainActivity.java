@@ -218,8 +218,9 @@ public class MainActivity extends AppCompatActivity {
 
                     byte[] bytes1 = new byte[byteBuffer1.remaining()];
                     byteBuffer1.get(bytes1);
-                    Mat mat = new Mat(6048, 4032, CvType.CV_16U);
+                    Mat mat = new Mat(6048, 4032, CvType.CV_8U);
                     mat.put(0,0,bytes1);
+                    
 
                    //String path =  mGalleryFolder_raw.getAbsolutePath();
                    // String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
