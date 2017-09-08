@@ -1,6 +1,5 @@
 package ri_navlab.navlab;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
@@ -13,7 +12,6 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.DngCreator;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
@@ -27,28 +25,31 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar.LayoutParams;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.KeyEvent;
+import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
@@ -83,12 +84,42 @@ public class MainActivity extends AppCompatActivity {
     private String mImageFileName_raw_txt;
     private String GALLERY_LOCATION = "image gallery";
     private String GALLERY_LOCATION_Raw = "Raw image gallery";
+    private ByteBuffer byteBuffer1;
+    private ByteBuffer byteBuffer2;
+    private byte[] bytes1;
+    private byte[] bytes2;
+    private Box box;
+    private float x_change, y_change;
+    private float mLastTouchX;
+    private float mLastTouchY;
+    private int mActivePointerId;
+    private float mPosX;
+    private float mPosY;
+    private static final int INVALID_POINTER_ID = -1;
     // private String mImageFileLocation = "";
     private File mGalleryFolder;
     private File mGalleryFolder_raw;
     private int mFlashStatus = CMAERA_FLASH_UNUSED;
-   // private int i = 1;
+    private int GLOBAL_STATE = 0;
+    private short[] dataRed;
+    private short[] dataRed2;
+    private int START = 0;
+    float[] a,b,c;
+    private int viewSize_height, viewSize_width,textureSize_width,textureSize_height;
+    int ii =0;
+    int dist_inupt;
+    Mat result;
+    Mat redChannel1;
+    Mat redChannel2;
+    int total_num =0;
+    float start_X = 0;
+    float start_Y = 0;
+    private boolean clicked  = true;
+    // private int i = 1;
     private ToggleButton toggle;
+    TextView myTextViewBlue_satr;
+    TextView myTextViewRed_satr;
+    TextView myTextViewGreen_satr;
     private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -137,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String mCameraId;
     private Size mImageSize;
-    private ImageReader mImageReader;
+    //private ImageReader mImageReader;
     private ImageReader mImageReader_raw;
     private Size mImageSize_raw;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new
@@ -172,114 +203,48 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            int i,number;
+            int i, number;
             int format = mImage.getFormat();
             switch (format) {
-                case ImageFormat.JPEG:
-                    ByteBuffer byteBuffer = mImage.getPlanes()[0].getBuffer();
-                   // while(byteBuffer.remaining()>0){
-                     //   System.out.println(byteBuffer.get());
-                    //}
-                    //System.out.println(byteBuffer);
-                    byte[] bytes = new byte[byteBuffer.remaining()];
-                    //System.out.println("---------------byte array---------------------");
-                    //for(number =0 ;number <bytes.length; number++){
-                      //  System.out.println(bytes[number]);
-                   // }
-                    byteBuffer.get(bytes);
-                    System.out.println("---------------From jpeg image---------------------");
-                    System.out.println(bytes.length);
-
-                    FileOutputStream fileOutputStream = null;
-                    try {
-                        System.out.println(mImageFileName);
-                        fileOutputStream = new FileOutputStream(mImageFileName);
-                        fileOutputStream.write(bytes);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } finally {
-                        mImage.close();
-                        if (fileOutputStream != null) {
-                            try {
-                                fileOutputStream.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                    break;
                 case ImageFormat.RAW_SENSOR:
-                    ByteBuffer byteBuffer1 = mImage.getPlanes()[0].getBuffer();
-                    System.out.println("---------------byte array in raw image---------------------");
-                    //System.out.println(byteBuffer1);
-                    //while(byteBuffer1.remaining()>0){
-                      //  System.out.println(byteBuffer1.get());
-                  //  }
+                    if (mFlashStatus == 0) {
+                        byteBuffer1 = mImage.getPlanes()[0].getBuffer();
+                        bytes1 = new byte[byteBuffer1.remaining()];
+                        byteBuffer1.get(bytes1);
+                        System.out.println("---------------byte array in raw image 1 ---------------------");
+                        //unlockFocus();
+                        mImage.close();
+                        //finishedCaptureLocked();
 
-                    byte[] bytes1 = new byte[byteBuffer1.remaining()];
-                    byteBuffer1.get(bytes1);
-                    Mat mat = new Mat(6048, 4032, CvType.CV_8U);
-                    mat.put(0,0,bytes1);
-                    
+                    }
+                    if(mFlashStatus == 1){
+                        byteBuffer2 = mImage.getPlanes()[0].getBuffer();
+                        bytes2 = new byte[byteBuffer2.remaining()];
+                        byteBuffer2.get(bytes2);
+                        mFlashStatus = 0;
+                        System.out.println("---------------byte array in raw image 2---------------------");
+                        mImage.close();
+                        //finishedCaptureLocked();
 
-                   //String path =  mGalleryFolder_raw.getAbsolutePath();
-                   // String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                       // unlockFocus();
 
-
-                    /*File file = new File(mImageFileName_raw_txt);
-                    if (!file.exists()) {
-                        try {
-
-                            System.out.println("-------txt file found------------");
-                            file.createNewFile();
-                        } catch (IOException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
-                        }
                     }
 
-                    FileOutputStream fos = null;
-                    try {
-                        System.out.println("-------txt file found and file writing------------");
-                        fos = new FileOutputStream(mImageFileName_raw_txt);
-                    } catch (FileNotFoundException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    try{
-                        fos.write(bytes1);
-                        //fos.flush();
-                        fos.close();
-                    }catch (IOException e){
-                        e.printStackTrace();
-                    }*/
 
-                   // for(number =0 ;number <bytes1.length; number++){
-                     // System.out.println(bytes1[number]);
-                    //}
-                    System.out.println(bytes1.length);
-
-                   // System.out.println(mCameraCharacteristics);
-                   // System.out.println(mCaptureResult);
-                    DngCreator dngCreator = new DngCreator(mCameraCharacteristics, mCaptureResult);
+                    // System.out.println(mCameraCharacteristics);
+                    // System.out.println(mCaptureResult);
+                   /* DngCreator dngCreator = new DngCreator(mCameraCharacteristics, mCaptureResult);
                     FileOutputStream rawFileOutputStream = null;
                     try {
 
                         rawFileOutputStream = new FileOutputStream(mImageFileName_raw);
                         dngCreator.writeImage(rawFileOutputStream, mImage);
 
-
-
-
                     } catch (IOException e) {
                         e.printStackTrace();
                     } finally {
-                        if (mFlashStatus ==1){
-
-                            mFlashStatus = CMAERA_FLASH_UNUSED;
-                        }
                         mImage.close();
-                        finishedCaptureLocked();
+                        //finishedCaptureLocked();
                         //unlockFocus();
                         //startPreview();
                         if (rawFileOutputStream != null) {
@@ -290,11 +255,132 @@ public class MainActivity extends AppCompatActivity {
                             }
 
                         }
-                    }
+                    }*/
                     break;
 
+
+
+/*
+                    byte[] bytes1 = new byte[byteBuffer1.remaining()];
+                    byteBuffer1.get(bytes1);
+                    short[] shorts = new short[bytes1.length / 2];
+
+
+                    for (i = 0; i < bytes1.length / 2; i++)  //changed from i = 0 to bytes1.length/2
+                    {
+                        int int_1 = toUnsignedInt(bytes1[2 * i + 1]);
+                        int int_2 = toUnsignedInt(bytes1[2 * i]);
+                        shorts[i] = twoBytesToShort(int_1, int_2);   //problems with doing this linearly, changed indices of shorts array
+
+
+                    }
+
+                    System.out.println("done1!!!!!!!!!!!!!");
+                    Mat mat = new Mat(mImageSize_raw.getHeight(), mImageSize_raw.getWidth(), CvType.CV_16U);
+                    mat.put(0, 0, shorts);
+                    DataOutputStream fos1 = null;
+                    DataOutputStream fos = null;
+
+
+
+
+                    int x0 = mImageSize_raw.getWidth() / 2;
+                    int y0 = mImageSize_raw.getHeight() / 2;
+                    int dx = mImageSize_raw.getHeight() / 6;
+                    int dy = mImageSize_raw.getHeight() / 6;
+                    System.out.println(x0);
+                    System.out.println(y0);
+                    System.out.println(dx);
+                    System.out.println(dy);
+
+                    Rect rect = new Rect(x0 -  dx , y0 -  dy , 2 * dx, 2 * dy);
+                    System.out.println(x0 -  dx);
+                    System.out.println(y0 -  dy);
+
+                    Mat mat_new = mat.submat(rect);
+                    int heights = mat_new.height();
+                    int widths = mat_new.width();
+                    System.out.println(heights);
+                    System.out.println(widths);
+                    short[] data = new short[heights * widths]; //data of small region
+                    mat_new.get(0, 0, data);
+                    System.out.println("done2!!!!!!!!!!!!!");
+
+
+
+
+
+                    //Mat redChannel = new Mat(heights / 2, widths / 2, CvType.CV_16U); //allocate correct size for Green
+                    /*for (int k = 0; k < mat_new.size().height; k++) {
+                        //System.out.println("---Traversing matrix of pixels----");
+                       for (int j = 0; j < mat_new.size().width; j++) {
+                           if (k % 2 == 1 && j % 2 == 0) {
+                                redChannel.put((k ) / 2, (j ) / 2, mat_new.get(k, j));
+
+                            }
+                        }
+                    }
+                    if (mFlashStatus == 0) {
+                        //dataRed = new short[heights * widths / 4];
+                        //redChannel.get(0, 0, dataRed);
+                        //redChannel1 = redChannel;
+
+                        System.out.println("----red channel 1 get!------");
+                        try {
+                            System.out.println("----txt file found here------");
+                            fos1 = new DataOutputStream(new FileOutputStream(mImageFileName_raw_txt));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            System.out.println("---------------From raw image write image 1---------------------");
+                            for (int j = 0; j < data.length; j++) {
+                                fos1.writeShort(data[j]);
+                            }
+                            fos1.close();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (mFlashStatus == 1) {
+                       // dataRed2 = new short[heights * widths / 4];
+                       // redChannel.get(0, 0, dataRed2);
+                       // redChannel2 = redChannel;
+                        System.out.println("----red channel 2 get!------");
+                        if (mFlashStatus == 1) {
+                            mFlashStatus = 0;
+                        }
+
+                        try {
+                            System.out.println("----txt file found here------");
+                            fos = new DataOutputStream(new FileOutputStream(mImageFileName_raw_txt));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            System.out.println("---------------From raw image write image 2---------------------");
+                            for (int j = 0; j < data.length; j++) {
+                                fos.writeShort(data[j]);
+                            }
+                            fos.close();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+
+                    System.out.println("Red data has been written");
+
+
+                    System.out.println(bytes1.length);*/
+
+
+                    //break;
+
             }
-            mFlashStatus = CMAERA_FLASH_UNUSED;
+
 //            unlockFocus();
         }
 
@@ -303,28 +389,23 @@ public class MainActivity extends AppCompatActivity {
     private Size mPreviewSize;
     private CaptureRequest.Builder mCaptureRequestBuilder;
     private CameraCaptureSession mPreviewCaptureSession;
+    TextView myTextViewBlue;
+    TextView myTextViewRed;
+    TextView myTextViewGreen;
     private CameraCaptureSession.CaptureCallback mPreviewCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult captureResult) {
-           // System.out.println("------------------------mCaptureState-----------------------------");
+
             //System.out.println(mCaptureState);
             switch (mCaptureState) {
                 case STATE_PREVIEW:
-              //      System.out.println("------------in STATE_PREVIEW-----------------------");
                     break;
-                //case STATE_WAIT_LOCK:
                 case STATE_WAIT_LOCK:
-              //      System.out.println("------------in STATE_WAIT_LOCK-----------------------");
+                         System.out.println("------------in STATE_WAIT_LOCK-----------------------");
                     mCaptureState = STATE_PREVIEW;
                     Integer afState = captureResult.get(CaptureResult.CONTROL_AF_STATE);
 
 
-                    //if (afState ==CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED){
-                    // unlockFocus();
-                    //mCaptureState= STATE_PICTURE_CAPTURED;
                     startImageCapture();
-                    Toast.makeText(getApplicationContext(), "AF LOCKED", Toast.LENGTH_SHORT).show();
-                    //
-                    //}
 
 
                     break;
@@ -339,20 +420,21 @@ public class MainActivity extends AppCompatActivity {
                 mCaptureRequestBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
                 Integer flashState = result.get(CaptureResult.FLASH_STATE);
                 if ((flashState != null && flashState == CaptureResult.FLASH_STATE_FIRED)) {
-                    // mWaitingForFlash = false;
-                   // System.out.println("I am in falsh,-------------------------------");
-                    // do the capture...
-                    // mState = STATE_PICTURE_TAKEN;
+                    System.out.println("in on captureCompleted");
 
                     startImageCapture();
-                    Toast.makeText(getApplicationContext(), "AF LOCKED", Toast.LENGTH_SHORT).show();
+
                     mCaptureResult = result;
+
                     return;  // don't call process()
                 }
             }
             process(result);
             //unlockFocus();
             mCaptureResult = result;
+
+
+
 
         }
     };
@@ -371,12 +453,12 @@ public class MainActivity extends AppCompatActivity {
         ORIENTATIONS.append(Surface.ROTATION_270, 270);
     }
 
-    private ImageButton mImageButton;
-    private ImageButton mFlashImageButton;
+
+    private Button mImageButton3;
+    private Button clickButton;
+    private ImageButton mFlashImageButton, mImageButton2;
     private File mImageFolder;
-    private int picture_number =1;
-
-
+    private int picture_number = 1;
 
     private static class CompareSizeByArea implements Comparator<Size> {
         @Override
@@ -385,151 +467,307 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-   private BaseLoaderCallback mloaderCallback  = new BaseLoaderCallback(this) {
-       @Override
-       public void onManagerConnected(int status) {
-           switch(status){
-               case LoaderCallbackInterface.SUCCESS:{
-                   Log.i("opencv", "Opencv loaded successfully");
-
-               }break;
-                   default:{
-                       super.onManagerConnected(status);
-                   }
-           }
-
-       }
-   };
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-
-        super.onCreate(savedInstanceState);
-        //getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
-        Box box = new Box(this);
-        setContentView(ri_navlab.navlab.R.layout.activity_main);
-        //addContentView(box, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
-        addContentView(box, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        //Box box = new Box(this);
-        //setContentView (new CameraShow(this) );
-
-
-        EditText editText=(EditText)findViewById(ri_navlab.navlab.R.id.edit_text);
-        editText.setOnEditorActionListener(new OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                //Toast.makeText(HelloEditText.this, String.valueOf(actionId), Toast.LENGTH_SHORT).show();
-                return false;
-         }
-        });
-
-        createImageGallery();
-        createImageGallery_Raw();
-
-        mTextureView = (TextureView) findViewById(ri_navlab.navlab.R.id.textureView);
-        mImageButton = (ImageButton) findViewById(ri_navlab.navlab.R.id.imageButton);
-       // toggle = (ToggleButton) findViewById(toggleButton);
-       // toggle.setChecked(false);
-       // toggle.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-        //    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-       //         startPreview();
-        //    }
-        //});
-
-        mImageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                for(int i =0; i<=1; i++){
-                    if (i ==1){
-                        mFlashStatus = CMAERA_FLASH_USED;
-                    }else{
-                        mFlashStatus = CMAERA_FLASH_UNUSED;
-                    }
-                    Thread thread=new Thread(new Runnable()
-                    {
-
-                        @Override
-                        public void run()
-                        {
-                            Log.e("ok", "111111111");
-                            // TODO Auto-generated method stub
-
-                            setup3AControlsLocked(mCaptureRequestBuilder);
-                            lockFocus();
-
-                        }
-                    });
-                    thread.start();
-                    try{
-                        thread.sleep(2000);
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
+    private BaseLoaderCallback mloaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+                    Log.i("opencv", "Opencv loaded successfully");
 
                 }
+                break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+            }
 
-                /*int n;
-                File file = new File(mImageFileName_raw);
-                int size = (int) file.length();
-                byte[] bytes = new byte[size];
+        }
+    };
+
+    private  EditText editText;
+    private  ImageButton mImageButton1;
+    private TextWatcher listenerTextChangedStatus = new TextWatcher() {
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+
+        }
+
+
+            @Override
+        public void beforeTextChanged(CharSequence s, int start, int count,
+                                      int after) {
+                Log.e(TAG, "Please input distance");
+
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            boolean test = true;
+            try {
+                Integer.parseInt(editText.getText().toString());
+            } catch(NumberFormatException e) {
+                test = false;
+                Toast.makeText(getApplicationContext(), "Please input integer distance", Toast.LENGTH_LONG).show();
+            }
+            if(!editText.getText().toString().isEmpty() && test){
+                mImageButton1.setEnabled(true);
+                // do action
+
+            }else{
+                mImageButton1.setEnabled(false);
+                System.out.println("in not enter distance");
+                Toast.makeText(getApplicationContext(), "Please input integer distance", Toast.LENGTH_LONG).show();
+            }
+
+        }
+
+    };
+
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(ri_navlab.navlab.R.layout.activity_main);
+        //createImageGallery();
+        //createImageGallery_Raw();
+        mImageButton1 = (ImageButton) findViewById(ri_navlab.navlab.R.id.imageButton1);
+        mImageButton1.setEnabled(false);
+        mImageButton2 = (ImageButton) findViewById(ri_navlab.navlab.R.id.imageButton2);
+        box = new Box(this, 0, 0);
+        box.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+        ViewGroup layout = (ViewGroup) findViewById(ri_navlab.navlab.R.id.frameView);
+        layout.addView(box);
+        mTextureView = (TextureView) findViewById(ri_navlab.navlab.R.id.textureView);
+       // mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+        FrameLayout rootView = (FrameLayout) findViewById(R.id.frameView);
+        rootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                float X , Y;
+                switch (motionEvent.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        start_X = motionEvent.getX();
+                        start_Y = motionEvent.getY();
+                        System.out.println("in action down");
+                        System.out.println("start_X:" + start_X);
+                        System.out.println("start_Y:" + start_Y);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        int[] size_box = box.getValue();
+                        System.out.println("in action up");
+                         textureSize_width = mTextureView.getWidth();
+                         textureSize_height = mTextureView.getHeight();
+                        double size = Math.sqrt(Math.pow(size_box[0] , 2) + Math.pow(size_box[1], 2));
+                        System.out.println("x");
+                        X = motionEvent.getX(0) - start_X;
+                        Y = motionEvent.getY(0) - start_Y;
+                        int k = 1;
+                        if(X < 0)
+                        {
+                            k = -1;
+                        }
+                        System.out.println("end_x:" + motionEvent.getX(0));
+                        System.out.println("end_y:" + motionEvent.getY(0));
+                        System.out.println("start_X:" + start_X);
+                        System.out.println("start_Y:" + start_Y);
+                        System.out.println("x:" + X);
+                        System.out.println("y:" + Y);
+                        double distance = Math.sqrt(Math.pow(X , 2) + Math.pow(Y, 2));
+                        System.out.println("distance:" + distance);
+                        System.out.println("size:" + size);
+                        double rate = distance / size;
+                        System.out.println("rate:" + rate*2);
+                        System.out.println("textureSize_width:" + (int)(textureSize_width * (1+ k * rate*2)));
+                        System.out.println("textureSize_height:" + (int)(textureSize_height * (1+ k * rate*2)));
+                        updateTextureViewSize_touch((int)(textureSize_width * (1+ k * rate*2)), (int)(textureSize_height * (1 +k * rate*2)));
+                        break;
+                }
+                return true;
+            }
+        });
+
+        //mTextureView.setOnTouchListener(new CustomTouchListener());
+        //System.out.println(mTextureView.getHeight());
+
+        editText = (EditText) findViewById(ri_navlab.navlab.R.id.edit_text);
+
+        String s = editText.getText().toString();
+
+        editText.addTextChangedListener(listenerTextChangedStatus );
+
+        mImageButton2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+
+
+
+            }
+        });
+        mImageButton1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int inputInt = 0;
                 try {
-                    System.out.println("-----------in try teh buf-----------------");
-                    FileInputStream fileStream = new FileInputStream(file);
-                    System.out.println(fileStream);
-                    BufferedInputStream buf = new BufferedInputStream(fileStream);
-                    buf.read(bytes, 0, bytes.length);
-                    //while(buf.available()>0){
-                        int c = buf.read();
-                        System.out.println(c);
-                   // }
-                    buf.close();
-                } catch (FileNotFoundException e) {
-                    // TODO Auto-generated catch block
+                    setup3AControlsLocked(mCaptureRequestBuilder);
+                    System.out.println("I am in createCaptureSession and onConfigured");
+                    mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), mPreviewCaptureCallback, mBackgroundHandler);
+                } catch (CameraAccessException e) {
                     e.printStackTrace();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
+                }
+
+                //mFlashStatus = CMAERA_FLASH_UNUSED;
+                //onPause();
+                //onResume();
+                myTextViewBlue_satr = (TextView) findViewById(R.id.blue_saturated);
+                myTextViewRed_satr = (TextView) findViewById(R.id.red_saturated);
+                myTextViewGreen_satr = (TextView) findViewById(R.id.green_saturated);
+
+                myTextViewBlue  = (TextView) findViewById(R.id.result_blue);
+                myTextViewRed = (TextView) findViewById(R.id.result_red);
+                myTextViewGreen = (TextView) findViewById(R.id.result_green);
+
+
+                //dist_inupt = Integer.valueOf(editText.getText().toString());
+
+                bytes1 = null;
+                bytes2 = null;
+                System.out.println("taking the first picture");
+                mFlashStatus = CMAERA_FLASH_UNUSED;
+
+
+                lockFocus();
+                System.out.println(mFlashStatus);
+
+                 try {
+                    Thread.sleep(500);
+                } catch (Exception e) {
                     e.printStackTrace();
-                }*/
+                }
+
+                System.out.println("taking the second picture");
+                mFlashStatus = CMAERA_FLASH_USED;
+
+
+
+                lockFocus();
+                System.out.println(mFlashStatus);
+
+                try {
+                    Thread.sleep(2000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+
+
+                int[] index = box.getValue();
+                       /* System.out.println("textureView width");
+                        System.out.println(mTextureView.getWidth());
+                        System.out.println("textureView height");
+                        System.out.println(mTextureView.getHeight());
+                        System.out.println("box_size: height");
+                        System.out.println((int) index[3]);
+                        System.out.println("box_size: width");
+                        System.out.println((int) index[2]);
+                        System.out.println("textureSize_height");
+                        System.out.println(index[1]*2);
+                        System.out.println("mImageSize_raw_height");
+                        System.out.println(mImageSize_raw.getHeight());
+                        System.out.println("index[1]*2");
+                        System.out.println(index[1]*2);
+                        System.out.println("mImageSize_raw_width");
+                        System.out.println(mImageSize_raw.getWidth());
+                        System.out.println("index[0]*2");
+                        System.out.println(index[0]*2);*/
+
+                float textviewToImage =  (float)mImageSize_raw.getHeight() / ((float)index[0] * 2);
+                float rates = (float)mTextureView.getWidth() / (float)(index[0] * 2) ;
+                System.out.println("rates");
+                System.out.println(rates);
+                int box_height_new = (int) (textviewToImage * index[2] * 2 / rates);
+                int box_width_new = (int) (textviewToImage * index[3] * 2 / rates);
+                if (box_height_new % 2 == 1){
+                    box_height_new =  box_height_new +1;
+                }
+                if (box_width_new % 2 == 1){
+                    box_width_new = box_width_new +1;
+                }
+                        /*System.out.println("box_height_new");
+                        System.out.println(box_height_new);
+                        System.out.println("box_width_new");
+                        System.out.println(box_width_new);*/
+                int x_start = mImageSize_raw.getHeight() / 2- box_height_new / 2;
+                int y_start = mImageSize_raw.getWidth() / 2 - box_width_new / 2;
+                        /*System.out.println("x_start");
+                        System.out.println(x_start);
+                        System.out.println("y_start");
+                        System.out.println(y_start);*/
+                RetroReflectivity retro = new RetroReflectivity(bytes1 , bytes2, y_start, x_start, box_width_new, box_height_new, mImageSize_raw.getHeight(), mImageSize_raw.getWidth(), 5);
+                System.out.println("begin calculate");
+                int test = retro.get_partition();
+                System.out.println("partition get!!!!");
+                a = retro.retoreFlectivityBlue();
+                System.out.println("calculate blue!!!!");
+                b = retro.retoreFlectivityRed();
+                System.out.println("calculate red!!!!");
+                c = retro.retoreFlectivityGreen();
+                System.out.println("calculate green!!!!");
+
+
+
+
+                myTextViewBlue.setText(String.valueOf(a[0]));
+                myTextViewRed.setText(String.valueOf(b[0]));
+                myTextViewGreen.setText(String.valueOf(c[0]));
+
+                if (a[1] == 1) {
+                    myTextViewBlue_satr.setText("saturate");
+                } else {
+                    myTextViewBlue_satr.setText("");
+                }
+                if (b[1] == 1) {
+                    myTextViewRed_satr.setText("saturate");
+                } else {
+                    myTextViewRed_satr.setText("");
+                }
+                if (c[1] == 1) {
+                    myTextViewGreen_satr.setText("saturate");
+                } else {
+                    myTextViewGreen_satr.setText("");
+                }
+
+
+                // System.out.println(c[0]);
+                //System.out.println(c[1]);
+                //retro.clearall();
+                retro = null;
+                bytes1 = null;
+                bytes2 = null;
+
+                onPause();
+                onResume();
+
+
+
 
 
 
             }
         });
 
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
-        //getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
-
-       // mFlashImageButton = (ImageButton) findViewById(R.id.imageButton2);
-
-       // mFlashImageButton.setOnClickListener(new View.OnClickListener() {
-        //    @Override
-         //   public void onClick(View v) {
-               // startPreview();
-           //     mFlashStatus = CMAERA_FLASH_USED;
-                // mCaptureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 40000);
-                //   mCaptureRequestBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
-
-
-             //   setup3AControlsLocked(mCaptureRequestBuilder);
-               // lockFocus();
-           // }
-        //});
-
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
-        //getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
+        return;
 
     }
 
 
+
+
+    //protected  void cal
+
     @Override
     protected void onResume() {
         super.onResume();
-
 
         startBackgroundThread();
         if (mTextureView.isAvailable()) {
@@ -541,23 +779,41 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-
-        if(!OpenCVLoader.initDebug()){
-            Log.d("OpenCv","lib not found");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mloaderCallback);
-        }else{
-            Log.d("OpenCV","opencv fund");
-            mloaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if(START == 0){
+            if (!OpenCVLoader.initDebug()) {
+                Log.d("OpenCv", "lib not found");
+                System.out.println("OpenCv lib not found");
+                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mloaderCallback);
+            } else {
+                Log.d("OpenCV", "opencv found");
+                System.out.println("OpenCv found");
+                mloaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            }
+            START = 1;
         }
+
     }
 
 
-    @Override
+  /*  @Override
     public void onRequestPermissionsResult(int requestCode, String[] permission, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permission, grantResults);
         if (requestCode == REQUEST_CAMERA_PERMISSION_RESULT) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(getApplicationContext(), "application no camera", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }*/
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CAMERA_PERMISSION_RESULT){
+            if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
+                Toast.makeText(getApplicationContext(), "Application not run without camera services",Toast.LENGTH_SHORT).show();
+            }
+            if(grantResults[1] != PackageManager.PERMISSION_GRANTED){
+                Toast.makeText(getApplicationContext(), "Application will not have an audio on record",Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -566,9 +822,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         closeCamera();
-
-
         stopbackgroundThread();
+
         super.onPause();
 
     }
@@ -635,7 +890,7 @@ public class MainActivity extends AppCompatActivity {
         mGalleryFolder = new File(storageDirectory, GALLERY_LOCATION);
         //System.out.println(mGalleryFolder);
         if (!mGalleryFolder.exists()) {
-          //  System.out.println("not created");
+            //  System.out.println("not created");
             if (mGalleryFolder.mkdirs()) {
                 Toast.makeText(getApplicationContext(), "new file dir made", Toast.LENGTH_SHORT).show();
             }
@@ -646,31 +901,22 @@ public class MainActivity extends AppCompatActivity {
     File createImageFile() throws IOException {
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        //String timeStamp =generateTimestamp();
         String imageFileName = "IMAGE_" + timeStamp + "_";
-        //System.out.println(imageFileName);
-        //System.out.println(mGalleryFolder);
         File image = File.createTempFile(imageFileName, ".jpg", mGalleryFolder);
 
-        //System.out.println("in create image");
         mImageFileName = image.getAbsolutePath();
-
-        //System.out.println(mImageFileName);
-
         return image;
 
     }
 
     private void createImageGallery_Raw() {
         String state = Environment.getExternalStorageState();
-        //System.out.println("in image gallery");
-        //File storageDirectory = getFilesDir();
-        File storageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+       File storageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         // mGalleryFolder= new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) +"/image gallery new/");
         mGalleryFolder_raw = new File(storageDirectory, GALLERY_LOCATION_Raw);
         //System.out.println(mGalleryFolder_raw);
         if (!mGalleryFolder_raw.exists()) {
-          //  System.out.println("not created");
+            //  System.out.println("not created");
             if (mGalleryFolder_raw.mkdirs()) {
                 Toast.makeText(getApplicationContext(), "new file dir made", Toast.LENGTH_SHORT).show();
             }
@@ -689,9 +935,9 @@ public class MainActivity extends AppCompatActivity {
         File image = File.createTempFile(imageFileName, ".dng", mGalleryFolder_raw);
         File text = File.createTempFile(imageFileName, ".txt", mGalleryFolder_raw);
         //System.out.println("in create image");
-        mImageFileName_raw_txt =text.getAbsolutePath();
+        mImageFileName_raw_txt = text.getAbsolutePath();
         mImageFileName_raw = image.getAbsolutePath();
-        //System.out.println(mImageFileName_raw);
+        System.out.println(mImageFileName_raw);
 
         return image;
 
@@ -708,25 +954,26 @@ public class MainActivity extends AppCompatActivity {
                 }
                 StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mFlashAvailable = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                //System.out.println("---------------------mFlashAvailable------------------------");
-                //System.out.println(mFlashAvailable);
                 int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
 
-                mtotalRotation = sensorDeviceRotation(cameraCharacteristics, deviceOrientation);
-                boolean swapRotation = mtotalRotation == 90 || mtotalRotation == 270;
-                int rotatedWidth = width;
-                int rotatedHeight = height;
-                if (swapRotation) {
-                    rotatedWidth = height;
-                    rotatedHeight = width;
-                }
+               // mtotalRotation = sensorDeviceRotation(cameraCharacteristics, deviceOrientation);
+               // boolean swapRotation = mtotalRotation == 90 || mtotalRotation == 270;
+               // int rotatedWidth = width;
+               // int rotatedHeight = height;
+               // if (swapRotation) {
+               //     rotatedWidth = height;
+               //     rotatedHeight = width;
+               // }
 
 
-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedWidth, rotatedHeight);
-                mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), rotatedWidth, rotatedHeight);
-                mImageSize_raw = chooseOptimalSize(map.getOutputSizes(ImageFormat.RAW_SENSOR), rotatedWidth, rotatedHeight);
-                mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 10);
-                mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+               // mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedWidth, rotatedHeight);
+               // mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), rotatedWidth, rotatedHeight);
+               // mImageSize_raw = chooseOptimalSize(map.getOutputSizes(ImageFormat.RAW_SENSOR), rotatedWidth, rotatedHeight);
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+                mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
+                mImageSize_raw = chooseOptimalSize(map.getOutputSizes(ImageFormat.RAW_SENSOR), width, height);
+                // mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 10);
+               // mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                 mImageReader_raw = ImageReader.newInstance(mImageSize_raw.getWidth(), mImageSize_raw.getHeight(), ImageFormat.RAW_SENSOR, 10);
                 mImageReader_raw.setOnImageAvailableListener(mOnImageRawAvailableListener, mBackgroundHandler);
                 mCameraId = cameraId;
@@ -747,6 +994,7 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                     cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+                    System.out.println("camera opened in connect camera");
                 } else {
                     if (shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA)) {
                         Toast.makeText(this, "video_app required access to camera ", Toast.LENGTH_SHORT).show();
@@ -768,7 +1016,6 @@ public class MainActivity extends AppCompatActivity {
         surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
         Surface previewSurface = new Surface(surfaceTexture);
-
         try {
 
             //if (mFlashStatus != 0){
@@ -778,20 +1025,28 @@ public class MainActivity extends AppCompatActivity {
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
             //setFlash(mCaptureRequestBuilder);
-            setup3AControlsLocked(mCaptureRequestBuilder);
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface(), mImageReader_raw.getSurface()), new CameraCaptureSession.StateCallback() {
+
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader_raw.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     mPreviewCaptureSession = session;
                     try {
-                        mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, mBackgroundHandler);
+
+                        setup3AControlsLocked2(mCaptureRequestBuilder);
+
+
+
+                        System.out.println("I am in createCaptureSession and onConfigured");
+                        mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), mPreviewCaptureCallback, mBackgroundHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
+
                 }
 
                 @Override
                 public void onConfigureFailed(CameraCaptureSession session) {
+                 //   onResume();
                     Toast.makeText(getApplicationContext(), "unable to setup camera preview", Toast.LENGTH_SHORT).show();
 
                 }
@@ -803,11 +1058,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
+
     private void startImageCapture() {
         try {
             List<CaptureRequest> captureList = new ArrayList<CaptureRequest>();
             mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
+            //mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
             mCaptureRequestBuilder.addTarget(mImageReader_raw.getSurface());
             mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, mtotalRotation);
             // mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
@@ -825,11 +1082,12 @@ public class MainActivity extends AppCompatActivity {
                                 e.printStackTrace();
                             }
                         }
-                        //@Override
-                        //public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,TotalCaptureResult result ){
-                        //  super.onCaptureCompleted(session,request,result);
+                        @Override
+                        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result ){
+                          super.onCaptureCompleted(session, request, result);
 
-//                        }
+
+                       }
                     };
             //mPreviewCaptureSession.stopRepeating();
             //mState = STATE_WAITING_FOR_3A_CONVERGENCE;
@@ -903,6 +1161,7 @@ public class MainActivity extends AppCompatActivity {
         //}
         // setFlash(mCaptureRequestBuilder);
 
+       setup3AControlsLocked(mCaptureRequestBuilder);
         try {
             mPreviewCaptureSession.capture(mCaptureRequestBuilder.build(), mPreviewCaptureCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
@@ -910,7 +1169,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void unlockFocus() {
+  /*  private void unlockFocus() {
         try {
             // Reset the autofucos trigger
             mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
@@ -923,19 +1182,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
-    //private void setFlash(CaptureRequest.Builder builder) {
-       //if (toggle != null && toggle.isChecked()) {
-            // builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
-            //builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
-            // builder.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
-       // } else {
-       //     builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
-       // }
-
-
-    //}
 
     private static boolean contains(int[] modes, int mode) {
         if (modes == null) {
@@ -950,34 +1198,90 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
     private void setup3AControlsLocked(final CaptureRequest.Builder builder) {
         Log.d(TAG, "setup3AControlsLocked is called");
-
-       // ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
+        System.out.println("setup3AControlsLocked is called");
+        // ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
 
         // Enable auto-magical 3A run by camera device
-        builder.set(CaptureRequest.CONTROL_MODE,
-                CaptureRequest.CONTROL_MODE_AUTO);
+       // if(flag == true){
+            builder.set(CaptureRequest.CONTROL_MODE,
+                    CaptureRequest.CONTROL_MODE_AUTO);
+       // builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+        builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+        builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+        builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+      //  }else
+      /*  {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+            builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+
+        }*/
+
+
+        //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
 
         Float minFocusDist =
                 mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
 
         // If MINIMUM_FOCUS_DISTANCE is 0, lens is fixed-focus and we need to skip the AF run.
         mNoAFRun = (minFocusDist == null || minFocusDist == 0);
+        //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
 
         if (!mNoAFRun) {
             // If there is a "continuous picture" mode available, use it, otherwise default to AUTO.
             if (contains(mCameraCharacteristics.get(
                     CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES),
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
-
                 System.out.println("I am in mNoAFRun == true");
-                builder.set(CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+               // if(flag == true){
+                    System.out.println("I am in true");
+                    builder.set(CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+
+                //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+            //    }
+
+           /*     else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+
+                     builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                     builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+
             } else {
                 System.out.println("I am in mNoAFRun == false");
-                builder.set(CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_AUTO);
+                //if(flag == true){
+                    System.out.println("I am in true");
+                    builder.set(CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+
+               //     builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+               // }
+
+              /*  else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+                //builder.set(CaptureRequest.CONTROL_AF_MODE,
+                //       CaptureRequest.CONTROL_AF_MODE_AUTO);
+            //    builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+            //    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+            //    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
             }
         }
 
@@ -985,53 +1289,387 @@ public class MainActivity extends AppCompatActivity {
         if (contains(mCameraCharacteristics.get(
                 CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
                 CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)) {
-            Log.d(TAG, "it gets here A");
+           // Log.d(TAG, "it gets here A");
+            System.out.println("it gets here A");
             //if ((toggle != null && toggle.isChecked())||mFlashStatus == 1) {
             if (mFlashStatus == 1) {
+                System.out.println("it gets here C");
                 Log.d(TAG, "it gets here C");
-                builder.set(CaptureRequest.FLASH_MODE,
-                        CaptureRequest.FLASH_MODE_TORCH);
+
+
+               // if(flag == true){
+                    System.out.println("I am in true");
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_TORCH);
+
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+
+                   // builder.set(CaptureRequest.FLASH_MODE,
+                    //        CaptureRequest.FLASH_MODE_OFF);
+                    //  builder.set(CaptureRequest.CONTROL_AF_MODE,
+                    //          CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+             //       builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+             //   }
+
+               /* else
+                {
+                    System.out.println("I am in false");
+                    //builder.set(CaptureRequest.FLASH_MODE,
+                   //         CaptureRequest.FLASH_MODE_OFF);
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_TORCH);
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
                 //builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
             } else {
                 Log.d(TAG, "it gets here D");
-                builder.set(CaptureRequest.FLASH_MODE,
-                        CaptureRequest.FLASH_MODE_OFF);
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+                System.out.println("it gets here D");
+
+               // if(flag == true){
+                    System.out.println("I am in true");
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_OFF);
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+
+                  //  builder.set(CaptureRequest.CONTROL_AF_MODE,
+                  //          CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+               // }
+
+              /*  else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+              //  builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+
+                //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+                //builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
 
             }
         } else {
             Log.d(TAG, "it gets here B");
-            builder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_ON);
+            System.out.println("it gets here b");
+
+
+                System.out.println("I am in true");
+             //   builder.set(CaptureRequest.CONTROL_AE_MODE,
+               //         CaptureRequest.CONTROL_AE_MODE_ON);
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(50000));
+            builder.set(CaptureRequest.SENSOR_SENSITIVITY, 2500);
+
+            //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long());
+            //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+
+          /*  else
+            {
+                System.out.println("I am in false");
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+            }*/
+
+            //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+            //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+            //builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
         }
-
-        //toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-          //  public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            //    if (isChecked) {
-              //      Log.d(TAG, "Toggle is on");
-                    //builder.set(CaptureRequest.FLASH_MODE,
-                    //CaptureRequest.FLASH_MODE_TORCH);
-
-//                } else {
-  //                  Log.d(TAG, "Toggle is off");
-                    // builder.set(CaptureRequest.FLASH_MODE,
-                    // CaptureRequest.FLASH_MODE_OFF);
-
-
-    //            }
-      //      }
-        //});
 
 
         // If there is an auto-magical white balance control mode available, use it.
-        if (contains(mCameraCharacteristics.get(
+      /*  if (contains(mCameraCharacteristics.get(
                 CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES),
                 CaptureRequest.CONTROL_AWB_MODE_AUTO)) {
             // Allow AWB to run auto-magically if this device supports this
             builder.set(CaptureRequest.CONTROL_AWB_MODE,
                     CaptureRequest.CONTROL_AWB_MODE_AUTO);
+        }*/
+
+/*        try {
+            mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }*/
+
+    }
+    private void setup3AControlsLocked2(final CaptureRequest.Builder builder) {
+        Log.d(TAG, "setup3AControlsLocked2 is called");
+        System.out.println("setup3AControlsLocked2 is called");
+        // ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
+
+        // Enable auto-magical 3A run by camera device
+        // if(flag == true){
+        builder.set(CaptureRequest.CONTROL_MODE,
+                CaptureRequest.CONTROL_MODE_AUTO);
+        // builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+
+        //  }else
+      /*  {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+            builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+
+        }*/
+
+
+        //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+
+        Float minFocusDist =
+                mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+
+        // If MINIMUM_FOCUS_DISTANCE is 0, lens is fixed-focus and we need to skip the AF run.
+        mNoAFRun = (minFocusDist == null || minFocusDist == 0);
+        //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+
+        if (!mNoAFRun) {
+            // If there is a "continuous picture" mode available, use it, otherwise default to AUTO.
+            if (contains(mCameraCharacteristics.get(
+                    CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES),
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
+                System.out.println("I am in mNoAFRun == true");
+                // if(flag == true){
+                System.out.println("I am in true");
+                builder.set(CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                //    }
+
+           /*     else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+
+                     builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                     builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+
+            } else {
+                System.out.println("I am in mNoAFRun == false");
+                //if(flag == true){
+                System.out.println("I am in true");
+                builder.set(CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                //     builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                // }
+
+              /*  else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+                //builder.set(CaptureRequest.CONTROL_AF_MODE,
+                //       CaptureRequest.CONTROL_AF_MODE_AUTO);
+                //    builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+                //    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+                //    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
+            }
         }
 
+
+        if (contains(mCameraCharacteristics.get(
+                CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
+                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)) {
+            // Log.d(TAG, "it gets here A");
+            System.out.println("it gets here A");
+            //if ((toggle != null && toggle.isChecked())||mFlashStatus == 1) {
+            if (mFlashStatus == 1) {
+                System.out.println("it gets here C");
+                Log.d(TAG, "it gets here C");
+
+
+                // if(flag == true){
+                System.out.println("I am in true");
+                builder.set(CaptureRequest.FLASH_MODE,
+                        CaptureRequest.FLASH_MODE_TORCH);
+
+                // builder.set(CaptureRequest.FLASH_MODE,
+                //        CaptureRequest.FLASH_MODE_OFF);
+                //  builder.set(CaptureRequest.CONTROL_AF_MODE,
+                //          CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                //       builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                //   }
+
+               /* else
+                {
+                    System.out.println("I am in false");
+                    //builder.set(CaptureRequest.FLASH_MODE,
+                   //         CaptureRequest.FLASH_MODE_OFF);
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_TORCH);
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+                //builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+            } else {
+                Log.d(TAG, "it gets here D");
+                System.out.println("it gets here D");
+
+                // if(flag == true){
+                System.out.println("I am in true");
+                builder.set(CaptureRequest.FLASH_MODE,
+                        CaptureRequest.FLASH_MODE_OFF);
+
+
+                //  builder.set(CaptureRequest.CONTROL_AF_MODE,
+                //          CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                // }
+
+              /*  else
+                {
+                    System.out.println("I am in false");
+                    builder.set(CaptureRequest.FLASH_MODE,
+                            CaptureRequest.FLASH_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+                }*/
+                //  builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+
+                //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+                //builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
+
+            }
+        } else {
+            Log.d(TAG, "it gets here B");
+            System.out.println("it gets here b");
+
+
+            System.out.println("I am in true");
+              builder.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+
+
+            //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long());
+            //    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+
+          /*  else
+            {
+                System.out.println("I am in false");
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(7000000));
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 3000);
+            }*/
+
+            //builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF);
+            //builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(900000000));
+            //builder.set(CaptureRequest.SENSOR_SENSITIVITY, 5000);
+        }
+
+
+        // If there is an auto-magical white balance control mode available, use it.
+      /*  if (contains(mCameraCharacteristics.get(
+                CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES),
+                CaptureRequest.CONTROL_AWB_MODE_AUTO)) {
+            // Allow AWB to run auto-magically if this device supports this
+            builder.set(CaptureRequest.CONTROL_AWB_MODE,
+                    CaptureRequest.CONTROL_AWB_MODE_AUTO);
+        }*/
+
+/*        try {
+            mPreviewCaptureSession.setRepeatingRequest(mCaptureRequestBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }*/
+
+    }
+
+
+    /*private void finishedCaptureLocked() {
+        //try {
+        // Reset the auto-focus trigger in case AF didn't run quickly enough.
+        if (!mNoAFRun) {
+            mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+
+
+            mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
+
+        }
+
+
+    }*/
+
+    private short twoBytesToShort(int b1, int b2) {
+        return (short) ((b1 << 8) | b2);
+    }
+
+    public int toUnsignedInt(byte x) {
+        return ((int) x) & 0xff;
+    }
+
+    /* class AThread implements Runnable {
+         Thread t;
+         Thread threadToWaitFor;
+
+         AThread(Thread threadToWaitFor) {
+             t = new Thread(this);
+             this.threadToWaitFor = threadToWaitFor;
+         }
+
+         public void run() {
+             try {
+                 threadToWaitFor.join();
+                // t.sleep(5000);
+
+                 System.out.println("taking the second picture");
+                 mFlashStatus = CMAERA_FLASH_USED;
+                 setup3AControlsLocked(mCaptureRequestBuilder);
+                 lockFocus();
+                 System.out.println(mFlashStatus);
+
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+         }
+     }
+     class BThread implements Runnable {
+             Thread t;
+
+             BThread() {
+                 t = new Thread(this);
+             }
+
+             public void run() {
+                 try {
+                     System.out.println("taking the first picture");
+                     mFlashStatus = CMAERA_FLASH_UNUSED;
+                     setup3AControlsLocked(mCaptureRequestBuilder);
+                     lockFocus();
+                     System.out.println(mFlashStatus);
+
+                 } catch (Exception e) {
+                     e.printStackTrace();
+                 }
+             }
+
+         }*/
+    private void updateTextureViewSize_touch(int viewWidth, int viewHeight) {
+        FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(viewWidth, viewHeight);
+        layout.gravity = Gravity.CENTER;
+        mTextureView.setLayoutParams(layout);
     }
 
 
@@ -1056,7 +1694,11 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+
+
 }
+
+
 
 
 
